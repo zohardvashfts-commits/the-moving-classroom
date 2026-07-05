@@ -124,19 +124,6 @@ header .back-btn.show{display:flex}
 .btn.ghost{background:#eef3f6;color:var(--ink)}
 .btn svg{width:17px;height:17px}
 
-/* ─── route-chooser sheet list ─── */
-.route-list{display:flex;flex-direction:column;gap:10px;margin-top:4px}
-.route-item{
-  display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:14px;
-  border:1.5px solid #e2eaee;background:#fbfdfe;cursor:pointer;font-size:16px;font-weight:500;
-  font-family:'Heebo',sans-serif;text-align:right;width:100%;color:var(--ink);
-}
-.route-item:active{background:#eef5f8}
-.route-item .rdot{width:15px;height:15px;border-radius:50%;flex-shrink:0;border:2px solid #fff;box-shadow:0 0 0 1.5px rgba(0,0,0,.15)}
-.route-item .arr{margin-inline-start:auto;color:var(--muted);display:flex}
-.route-item .arr svg{width:16px;height:16px}
-.route-item.done .rname::after{content:' ✓';color:#16a34a;font-weight:700}
-
 /* ─── floating done button on path screens ─── */
 .fab{
   position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));inset-inline-start:16px;z-index:40;
@@ -1290,7 +1277,6 @@ const TEACHER_TAG_TITLES = [
 /* ── state ── */
 let score = 0;
 const seen = new Set();          // "sceneKey:index" of viewed tags
-const donePaths = new Set();     // path keys completed
 let currentPathKey = null;       // key of path on the path screen
 let currentTags = [];            // tags rendered on path screen
 let currentSheetIdx = -1;
@@ -1517,24 +1503,19 @@ function openTag(i){
 /* ── routes chooser ── */
 function openRoutes(){
   sheetContext='routes';
-  if(currentPathKey) donePaths.add(currentPathKey);
-  const items = [
-    ...PATHS.map(p=>({key:p.key,name:'המסלול של '+p.name,color:p.color})),
-    {key:'noa',name:'המסלול של נועה המחנכת',color:'#ffffff'},
-    {key:'all',name:'כל המסלולים יחד',color:'#1a2b33'},
-  ].map(it=>`<button class="route-item ${donePaths.has(it.key)?'done':''}" data-key="${it.key}">
-      <span class="rdot" style="background:${it.color}"></span><span class="rname">${it.name}</span>
-      <span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>
-    </button>`).join('');
   openSheet(
-    `<h2 style="margin-bottom:12px">צומת בחירה</h2>
-     <div class="route-list">${items}</div>`,
+    `<h2 style="margin-bottom:12px">מה תרצו לעשות עכשיו?</h2>
+     <div style="display:flex;flex-direction:column;gap:10px">
+       <button class="btn full ghost" id="anotherPathBtn">לבחור מסלול נוסף
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+       <button class="btn full ghost" id="allPathsBtn">לראות את כל המסלולים יחד
+         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+     </div>`,
     `<button class="btn full" id="toSummaryBtn">סיימתי את הסיור — לסיכום
        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
   );
-  document.querySelectorAll('.route-item').forEach(b=>{
-    b.addEventListener('click',()=>{ closeSheet(); startPath(b.dataset.key); });
-  });
+  $('anotherPathBtn').addEventListener('click',()=>{ closeSheet(); $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי'; show('screen-choice'); sizeChoice(); });
+  $('allPathsBtn').addEventListener('click',()=>{ closeSheet(); startPath('all'); });
   $('toSummaryBtn').addEventListener('click',()=>{ closeSheet(); $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי'; show('screen-summary'); });
 }
 $('doneFab').addEventListener('click',openRoutes);
@@ -1553,7 +1534,7 @@ $('backBtn').addEventListener('click',()=>{
 $('toEndBtn').addEventListener('click',()=>show('screen-end'));
 $('summaryBackBtn').addEventListener('click',()=>{ show('screen-choice'); sizeChoice(); });
 $('restartBtn').addEventListener('click',()=>{
-  score=0; $('scoreVal').textContent='0'; seen.clear(); donePaths.clear();
+  score=0; $('scoreVal').textContent='0'; seen.clear();
   $('headerTitle').textContent='הכיתה כמרחב לימוד דיפרנציאלי';
   show('screen-choice'); sizeChoice();
 });
