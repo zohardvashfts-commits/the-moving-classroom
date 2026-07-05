@@ -1311,10 +1311,6 @@ function plusIconSvg(light){
   const c=light?'#222':'#fff';
   return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"><path d="M12 5v9"/><circle cx="12" cy="18.4" r="0.6" fill="${c}"/></svg>`;
 }
-function infoIconSvg(light){
-  const c=light?'#222':'#fff';
-  return `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="3" stroke-linecap="round"><line x1="12" y1="10.3" x2="12" y2="16.2"/><circle cx="12" cy="7.1" r="1" fill="${c}" stroke="none"/></svg>`;
-}
 function makeDot(x,y,color,contentFn,ariaLabel,extraClass){
   const d=document.createElement('button');
   d.className='tag-dot'+(extraClass?' '+extraClass:'');
@@ -1366,32 +1362,8 @@ function drawRouteLines(wrapId, tags){
   $(wrapId).appendChild(svg);
 }
 
-/* ── per-child "meet the child" info dot (unconnected, unnumbered) ── */
+/* excludes each character's "meet me" tag from the numbered/connected stations */
 function isBioTag(title){ return typeof title==='string' && title.includes('נעים להכיר'); }
-function bioTagForKey(key){
-  const p=PATHS.find(p=>p.key===key);
-  return p ? childScene.tags.find(t=>t.title===p.introTag) : null;
-}
-function renderInfoDot(wrapId, key){
-  const p=PATHS.find(p=>p.key===key);
-  const bio=bioTagForKey(key);
-  if(!p || !bio) return;
-  const d=makeDot(6,90,p.color,(light)=>infoIconSvg(light),'הכירו את '+p.name,'info-dot');
-  d.addEventListener('click',()=>openInfoDot(key));
-  $(wrapId).appendChild(d);
-}
-function openInfoDot(key){
-  const p=PATHS.find(p=>p.key===key);
-  const bio=bioTagForKey(key);
-  if(!p || !bio) return;
-  const infoKey=currentPathKey+':info';
-  if(!seen.has(infoKey)){ seen.add(infoKey); addScore(10); }
-  refreshPathDots();
-  openSheet(
-    `<div class="tag-chip"><span class="dotmini" style="background:${p.color}"></span>הכירו את ${p.name}</div>
-     ${mediaHtml(bio)}<h2>${bio.title}</h2><p class="body">${bio.text||''}</p>`
-  );
-}
 
 /* ── per-color numbering for the combined "all paths" view ── */
 function canonicalStationTitles(color){
@@ -1455,10 +1427,16 @@ function characterForTag(t){
 function openIntro(i){
   const t = childScene.tags[i];
   const ch = characterForTag(t);
+  let text = t.text, media = mediaHtml(t);
+  if(ch && ch.key==='noa' && !text){
+    // teacher intro text lives in the combined scene
+    const full = DATA[ALL_SCENE].tags.find(x=>x.title==='נועה המחנכת - נעים להכיר.');
+    if(full){ text = full.text; media = mediaHtml(full); }
+  }
   const btnLabel = ch.key==='noa' ? 'מה נועה עושה בזמן הלמידה?' : 'למסלול הלמידה של '+ch.name;
   openSheet(
     `<div class="tag-chip"><span class="dotmini" style="background:${ch.color}"></span>${childScene.title}</div>
-     <h2>${t.title}</h2>`,
+     ${media}<h2>${t.title}</h2><p class="body">${text||''}</p>`,
     `<button class="btn full" id="goPathBtn">${btnLabel}
        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>`
   );
@@ -1498,10 +1476,7 @@ function startPath(key){
 
   $('wrap-path').classList.toggle('mini-dots', key==='all');
   clearRouteLines('wrap-path');
-  if(isChildPath){
-    drawRouteLines('wrap-path', currentTags);
-    renderInfoDot('wrap-path', key);
-  }
+  if(isChildPath) drawRouteLines('wrap-path', currentTags);
 
   show('screen-path');
   sizeScene('vp-path','bg-path',scene);
@@ -1510,8 +1485,7 @@ function startPath(key){
 }
 function refreshPathDots(){
   document.querySelectorAll('#wrap-path .tag-dot').forEach(d=>{
-    if(d.classList.contains('info-dot')) d.classList.toggle('seen', seen.has(currentPathKey+':info'));
-    else d.classList.toggle('seen', seen.has(currentPathKey+':'+d.dataset.idx));
+    d.classList.toggle('seen', seen.has(currentPathKey+':'+d.dataset.idx));
   });
 }
 function updateDoneFab(){
