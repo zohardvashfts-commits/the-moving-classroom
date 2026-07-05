@@ -1328,10 +1328,9 @@ function buildScene(wrapId, bgId, scene, tags, onTag, numberLabels){
   });
 }
 
-/* ── route connector lines (child paths only) ── */
+/* ── route connector lines ── */
 function clearRouteLines(wrapId){
-  const svg=$(wrapId).querySelector('.route-line-svg');
-  if(svg) svg.remove();
+  $(wrapId).querySelectorAll('.route-line-svg').forEach(svg=>svg.remove());
 }
 function drawRouteLines(wrapId, tags){
   if(tags.length<2) return;
@@ -1363,6 +1362,16 @@ function numbersForAll(tags){
     if(!cache[t.color]) cache[t.color]=canonicalStationTitles(t.color);
     const idx=cache[t.color].indexOf(t.title);
     return idx>=0 ? idx+1 : '?';
+  });
+}
+/* one connector line per path, each following that path's own station order */
+function drawAllRouteLines(wrapId, tags){
+  const byColor={};
+  tags.forEach(t=>{ (byColor[t.color]=byColor[t.color]||[]).push(t); });
+  Object.keys(byColor).forEach(color=>{
+    const order=canonicalStationTitles(color);
+    const ordered=order.map(title=>byColor[color].find(t=>t.title===title)).filter(Boolean);
+    drawRouteLines(wrapId, ordered);
   });
 }
 
@@ -1462,7 +1471,8 @@ function startPath(key){
 
   $('wrap-path').classList.toggle('mini-dots', key==='all');
   clearRouteLines('wrap-path');
-  if(isChildPath) drawRouteLines('wrap-path', currentTags);
+  if(key==='all') drawAllRouteLines('wrap-path', currentTags);
+  else if(isChildPath) drawRouteLines('wrap-path', currentTags);
 
   show('screen-path');
   sizeScene('vp-path','bg-path',scene);
